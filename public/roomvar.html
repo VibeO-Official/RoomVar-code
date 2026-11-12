@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ru" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roomvar — AI interior design</title>
+<meta name="description" content="Chat with an AI interior designer and generate photorealistic room visuals.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+
+<!-- ============================================================
+     1. CONFIGURATION
+     AI: free Pollinations.ai text + image APIs (no key needed).
+     SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY are PUBLIC values
+     (safe in the browser). No private keys belong in this file.
+     ============================================================ -->
+
+
+<!-- ============================================================
+     2. STYLES
+     ============================================================ -->
+<link rel="stylesheet" href="/roomvar-tokens.css">
+<link rel="stylesheet" href="/roomvar-theme.css">
+</head>
+<body class="roomvar">
+
+<!-- ============================================================
+     3. MARKUP
+     ============================================================ -->
+
+
+<div id="auth" class="hidden rv-auth">
+  <div class="rv-top"><a href="/" class="rv-brand"><img src="/favicon.png" alt="Roomvar"><span>room<b>var</b></span></a><span class="rv-note">YOUR SPACE. <b>REIMAGINED.</b></span></div>
+  <div class="rv-card">
+    <div class="rv-tabs" role="tablist"><button type="button" id="tabSignup" role="tab">Регистрация</button><button type="button" id="tabSignin" role="tab">Вход</button></div>
+    <h1 id="authTitle">Создайте пространство своей <em>мечты</em></h1>
+    <p class="rv-sub" id="authSub">Зарегистрируйтесь и начните создавать уникальные интерьеры с помощью AI.</p>
+    <form id="authForm" novalidate>
+      <label class="rv-field" id="nameRow"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><input id="displayName" type="text" placeholder="Имя" maxlength="100" autocomplete="name"></label>
+      <label class="rv-field"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><input id="email" type="email" placeholder="Email" required maxlength="255" autocomplete="email"></label>
+      <label class="rv-field"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><input id="password" type="password" placeholder="Пароль (минимум 6 символов)" required minlength="6" autocomplete="new-password"><button type="button" class="rv-eye" id="pwToggle" aria-label="Показать пароль"><svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></label>
+      <button class="rv-submit" id="authBtn" type="submit">Зарегистрироваться</button>
+    </form>
+    <div class="rv-or"><span>или</span></div>
+    <button type="button" class="rv-google" id="googleBtn"><svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Продолжить с Google</button>
+    <p class="note" id="authMsg"></p>
+  </div>
+<style>
+#auth.rv-auth{position:fixed;inset:0;display:grid;place-items:center;padding:110px 24px 40px;overflow:auto;background:linear-gradient(90deg,rgba(3,8,5,.92) 0%,rgba(3,8,5,.55) 45%,rgba(3,8,5,.1) 75%),url(/__l5e/assets-v1/39f77096-fd90-4b88-abdb-7edabc5c45a5/auth-bg.jpg) center/cover no-repeat #050a07;font-family:Manrope,system-ui,sans-serif}
+#auth.rv-auth.hidden{display:none}
+.rv-top{position:absolute;top:34px;left:56px;right:56px;display:flex;justify-content:space-between;align-items:center}
+.rv-brand{display:flex;align-items:center;gap:14px;color:#fff;text-decoration:none;font-size:34px;font-weight:500;letter-spacing:-.5px}.rv-brand img{width:44px;height:44px;object-fit:contain}.rv-brand b{font-weight:500;color:#7cf27a}
+.rv-note{font-size:12px;letter-spacing:2.5px;color:#c9d6cf}.rv-note b{color:#5ff0c0;font-weight:600}
+.rv-card{width:100%;max-width:548px;margin-right:auto;margin-left:12vw;padding:30px 58px 46px;border-radius:22px;background:linear-gradient(160deg,rgba(30,55,42,.55),rgba(8,18,13,.72));border:1px solid rgba(110,240,140,.35);box-shadow:0 0 40px rgba(80,230,120,.18),inset 0 1px 0 rgba(255,255,255,.06);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);color:#fff}
+.rv-tabs{display:flex;gap:16px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:32px}
+.rv-tabs button{background:none;border:0;color:#9aa8a1;font:500 17px Manrope,sans-serif;padding:14px 18px;cursor:pointer;position:relative}
+.rv-tabs button.on{color:#8ff58a}.rv-tabs button.on:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;border-radius:3px;background:linear-gradient(90deg,#9cf55a,#2ef2e6)}
+.rv-card h1{font-size:35px;line-height:1.2;font-weight:500;margin:0 0 20px;letter-spacing:-.3px}.rv-card h1 em{font-style:normal;color:#7cf27a}
+.rv-sub{color:#c3cec8;font-size:15px;line-height:1.65;margin:0 0 28px;max-width:330px}
+.rv-field{display:flex;align-items:center;gap:14px;height:54px;padding:0 18px;margin-bottom:14px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:rgba(5,12,9,.55);transition:border-color .2s,box-shadow .2s}
+.rv-field:focus-within{border-color:#6ff09a;box-shadow:0 0 0 3px rgba(110,240,154,.12)}
+.rv-field svg{width:21px;height:21px;flex:none;fill:none;stroke:#7cf27a;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.rv-field input{flex:1;min-width:0;background:none;border:0;outline:none;color:#fff;font:14px Manrope,sans-serif}.rv-field input::placeholder{color:#b5c0ba}
+.rv-eye{background:none;border:0;padding:4px;cursor:pointer;display:flex}.rv-eye svg{stroke:#9aa8a1}
+.rv-submit{width:100%;height:56px;margin-top:20px;border:0;border-radius:30px;cursor:pointer;color:#052012;font:600 15px Manrope,sans-serif;background:linear-gradient(90deg,#b7f54a,#2ef6f0);box-shadow:0 0 26px rgba(80,240,200,.3);display:flex;align-items:center;justify-content:center;gap:10px;transition:filter .2s,transform .2s}
+.rv-submit:after{content:"→";font-size:18px}.rv-submit:hover{filter:brightness(1.08);transform:translateY(-1px)}.rv-submit:disabled{opacity:.6;cursor:wait}
+.rv-or{display:flex;align-items:center;gap:18px;margin:30px 0 22px;color:#a9b5ae;font-size:14px}.rv-or:before,.rv-or:after{content:"";flex:1;height:1px;background:rgba(255,255,255,.14)}
+.rv-google{width:100%;height:54px;border-radius:30px;border:1px solid rgba(255,255,255,.3);background:rgba(5,12,9,.4);color:#fff;font:500 15px Manrope,sans-serif;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:background .2s}.rv-google:hover{background:rgba(255,255,255,.07)}.rv-google svg{width:22px;height:22px}.rv-google:disabled{opacity:.6}
+.rv-card .note{margin-top:16px;font-size:13px}
+@media(max-width:900px){.rv-card{margin:0 auto}}
+@media(max-width:560px){.rv-top{top:22px;left:20px;right:20px}.rv-note{display:none}.rv-brand{font-size:26px}.rv-brand img{width:34px;height:34px}.rv-card{padding:22px 22px 30px}.rv-card h1{font-size:28px}.rv-auth{padding:90px 14px 24px}}
+#auth.rv-auth{overflow:hidden;overscroll-behavior:none;touch-action:none;padding-top:90px;padding-bottom:16px}
+#auth.rv-auth input,#auth.rv-auth button{touch-action:manipulation}
+@media(max-height:900px){.rv-top{top:20px}.rv-card{padding:18px 40px 24px}.rv-tabs{margin-bottom:16px}.rv-tabs button{padding:10px 16px}.rv-card h1{font-size:28px;margin-bottom:10px}.rv-sub{margin-bottom:16px;font-size:14px;line-height:1.5}.rv-field{height:46px;margin-bottom:10px}.rv-submit{height:48px;margin-top:10px}.rv-or{margin:16px 0 12px}.rv-google{height:46px}#auth.rv-auth{padding-top:76px}}
+@media(max-height:700px){.rv-brand{font-size:24px}.rv-brand img{width:30px;height:30px}.rv-card h1{font-size:23px}.rv-sub{display:none}.rv-field{height:42px}.rv-submit,.rv-google{height:44px}#auth.rv-auth{padding-top:64px}}
+</style>
+</div>
+
+<div id="app" class="hidden">
+
+  <div id="leftResize" class="resize-handle left-resize" role="separator" aria-label="Tools panel width" aria-orientation="vertical" aria-valuemin="56" aria-valuemax="180" aria-valuenow="64" tabindex="0"></div>
+  <div id="rightResize" class="resize-handle right-resize" role="separator" aria-label="History panel width" aria-orientation="vertical" aria-valuemin="210" aria-valuemax="520" aria-valuenow="280" tabindex="0"></div>
+  <aside id="sidebar">
+    <div class="sb-head">
+      <img class="logo" src="/favicon.png" alt="Roomvar"><span class="brand">Roomvar</span><button id="rightClose" class="icon-btn panel-close" title="Hide chat history">›</button>
+    </div>
+    <nav class="sb-nav"><button id="railChat" class="hidden" title="AI Chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6A8.4 8.4 0 0 1 12.5 3h.5a8.5 8.5 0 0 1 8 8v.5Z"/></svg></button>
+      <button class="nav-item" id="newChat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-6"/><path d="m16 3 5 5M10 14l1-4L19 2a2.1 2.1 0 0 1 3 3l-8 8-4 1Z"/></svg><span class="nav-label">Новый чат</span></button>
+      <button class="nav-item hidden" id="navImage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Image generator</button>
+      <button class="nav-item hidden" id="navRoom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 4l9 6.5V20H3Z"/><path d="M9 20v-6h6v6"/></svg>Design my room</button>
+      <button class="nav-item hidden" id="navGallery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>My gallery</button>
+<button id="railRoom" class="nav-item" title="Design my room"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m3 10 9-7 9 7v11H3V10Z"/><path d="M9 21v-8h6v8"/></svg><span data-i18n="room">Моя комната</span></button>
+<button id="railImage" class="nav-item" title="Image generator"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 4 4 4-5 4 7"/></svg><span data-i18n="image">Создать изображение</span></button>
+<button id="railGallery" class="nav-item" title="My gallery"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span data-i18n="gallery">Моя галерея</span></button>
+    </nav>
+    <div class="history-heading" data-i18n="history">История чатов</div><div class="sb-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" placeholder="Search chats">
+    </div>
+    <div id="threads"></div>
+    <div class="sb-foot"><button id="railSettings" class="nav-item" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 1.72l-.12.86a2 2 0 0 1-1.18 1.52l-.26.12a2 2 0 0 1-1.9-.18l-.7-.54a2 2 0 0 0-2.62.6l-.22.38a2 2 0 0 0 .34 2.66l.66.54a2 2 0 0 1 .72 1.74v.32a2 2 0 0 1-.72 1.74l-.66.54a2 2 0 0 0-.34 2.66l.22.38a2 2 0 0 0 2.62.6l.7-.54a2 2 0 0 1 1.9-.18l.26.12a2 2 0 0 1 1.18 1.52l.12.86a2 2 0 0 0 2 1.72h.44a2 2 0 0 0 2-1.72l.12-.86a2 2 0 0 1 1.18-1.52l.26-.12a2 2 0 0 1 1.9.18l.7.54a2 2 0 0 0 2.62-.6l.22-.38a2 2 0 0 0-.34-2.66l-.66-.54a2 2 0 0 1-.72-1.74v-.32a2 2 0 0 1 .72-1.74l.66-.54a2 2 0 0 0 .34-2.66l-.22-.38a2 2 0 0 0-2.62-.6l-.7.54a2 2 0 0 1-1.9.18l-.26-.12a2 2 0 0 1-1.18-1.52l-.12-.86a2 2 0 0 0-2-1.72Z"/><circle cx="12" cy="12" r="3"/></svg><span data-i18n="settings">Настройки</span></button><div id="quotaOrb" class="quota-orb" title="Лимит изображений" aria-label="Лимит изображений"><div class="quota-water" id="quotaWater"></div><span id="quotaText">0/5</span></div><button id="railAccount" class="hidden" title="Account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg></button>
+      <div class="user-row">
+        <div class="avatar" id="avatar">?</div>
+        <div class="em" id="userEmail"></div>
+        <button class="icon-btn" id="logout" title="Sign out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button>
+      </div>
+    </div>
+  </aside>
+  <div id="scrim"></div>
+
+  <main id="main">
+    <div class="topbar">
+      <button class="icon-btn panel-toggle" id="leftToggle" title="Hide tools" aria-label="Toggle tools panel" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button>
+      <button id="openSettings" class="icon-btn" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 1.72l-.12.86a2 2 0 0 1-1.18 1.52l-.26.12a2 2 0 0 1-1.9-.18l-.7-.54a2 2 0 0 0-2.62.6l-.22.38a2 2 0 0 0 .34 2.66l.66.54a2 2 0 0 1 .72 1.74v.32a2 2 0 0 1-.72 1.74l-.66.54a2 2 0 0 0-.34 2.66l.22.38a2 2 0 0 0 2.62.6l.7-.54a2 2 0 0 1 1.9-.18l.26.12a2 2 0 0 1 1.18 1.52l.12.86a2 2 0 0 0 2 1.72h.44a2 2 0 0 0 2-1.72l.12-.86a2 2 0 0 1 1.18-1.52l.26-.12a2 2 0 0 1 1.9.18l.7.54a2 2 0 0 0 2.62-.6l.22-.38a2 2 0 0 0-.34-2.66l-.66-.54a2 2 0 0 1-.72-1.74v-.32a2 2 0 0 1 .72-1.74l.66-.54a2 2 0 0 0 .34-2.66l-.22-.38a2 2 0 0 0-2.62-.6l-.7.54a2 2 0 0 1-1.9.18l-.26-.12a2 2 0 0 1-1.18-1.52l-.12-.86a2 2 0 0 0-2-1.72Z"/><circle cx="12" cy="12" r="3"/></svg></button><div class="title" id="topTitle">AI Chat</div><div class="chat-toolbar"><button class="icon-btn panel-toggle" id="rightToggle" title="Hide chat history" aria-label="Toggle history panel" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></svg></button></div>
+    </div>
+
+    <div id="quotaBanner" class="quota-banner hidden" role="status"><span id="quotaBannerText">Лимит 5 изображений исчерпан. Он обновляется каждые 12 часов</span><button id="quotaBannerClose" class="icon-btn" title="Закрыть">×</button></div>
+    <div id="scroll">
+      <div class="wrap">
+        <section id="welcome"><h2 id="greeting">С чего начнём?</h2></section>
+        <section id="messages"></section>
+        <section id="gallery" class="hidden">
+          <h2>My gallery</h2>
+          <p class="sub">Every image you've generated, saved to your account.</p>
+          <div class="grid" id="galleryGrid"></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="composer-wrap" id="composerWrap">
+      <div class="composer" id="composer">
+        <div class="glow"></div>
+        <div class="box" id="box">
+          <div id="preview" class="hidden"></div>
+          <textarea id="input" rows="1" placeholder="Describe your room or ask anything…"></textarea>
+          <div class="bar">
+            <button class="tool" id="attach" title="Attach a room photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.4 11-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg><span class="lbl">Room photo</span></button>
+            <button class="tool" id="imgMode" title="Generate an image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span class="lbl">Create image</span></button>
+            <button class="tool" id="mic" title="Voice input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10a7 7 0 0 1-14 0M12 19v3"/></svg></button>
+            <div class="spacer"></div>
+            <button id="send" disabled title="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+          </div>
+        </div>
+        <input type="file" id="file" accept="image/*" class="hidden">
+        <div class="foot-note">roomvar can make mistakes. Check measurements before you buy.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<aside id="roomPanel" class="hidden" aria-label="Room design">
+  <div class="rp-head"><span>Ваша комната</span><button class="icon-btn" id="roomClose" title="Закрыть">×</button></div>
+  <div class="rp-body" id="roomBody"></div>
+</aside>
+<div id="lightbox" class="hidden"><img alt=""></div>
+<div id="toast" class="hidden"></div>
+<dialog id="accountDialog"><div class="dialog-heading"><h2>Your account</h2><button class="icon-btn" id="closeAccount" title="Close">×</button></div><p id="accountEmail"></p><button class="btn btn-primary" id="accountLogout">Sign out</button></dialog>
+
+<dialog id="settingsDialog"><div class="dialog-heading"><h2 data-i18n="settings">Настройки</h2><button id="closeSettings" class="icon-btn" title="Закрыть">×</button></div>
+<label class="setting-row" for="languageSetting"><span data-i18n="language">Язык</span><select id="languageSetting"><option value="ru">Русский</option><option value="uz">O‘zbekcha</option><option value="en">English</option></select></label>
+<label class="setting-row" for="replyStyleSetting"><span data-i18n="style">Стиль ответов</span><select id="replyStyleSetting"><option value="balanced" data-i18n="balanced">Обычный</option><option value="concise" data-i18n="concise">Кратко</option><option value="detailed" data-i18n="detailed">Подробно</option></select></label>
+<label class="setting-row" for="textSizeSetting"><span data-i18n="size">Размер текста</span><select id="textSizeSetting"><option value="normal" data-i18n="normal">Обычный</option><option value="large" data-i18n="large">Крупный</option></select></label>
+<label class="setting-row" for="motionSetting"><span data-i18n="motion">Плавная анимация</span><input type="checkbox" id="motionSetting" role="switch"></label></dialog>
+<!-- ============================================================
+     4. APPLICATION LOGIC
+     ============================================================ -->
+<script type="module">
+import { installPasswordAuth } from "/roomvar-auth.js";
+import { installPreferences, replyInstruction } from "/roomvar-preferences.js";
+import { resolveImageRequest } from "/roomvar-image-request.js";
+import { pastedImage, installImageActions, downloadImage } from "/roomvar-image-actions.js";
+(() => {
+const sb = window.parent.roomvarClient;
+if (!sb) { location.replace("/"); return; }
+// /lovable\.app$|lovableproject\.com$|^localhost$|^127\./.test(location.hostname);
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const md = (s) => DOMPurify.sanitize(marked.parse(s || ""));
+
+
+
+const state = { user: null, threads: [], activeId: null, messages: [], imgMode: false, attachment: null, busy: false, controller: null, view: "chat", authMode: "signin" };
+
+const preferences = installPreferences(document);
+function syncWelcome(){ $("main").classList.toggle("welcome-mode",state.view==="chat"&&!state.activeId&&!state.messages.length&&!state.busy); }
+/* ---------- Toast ---------- */
+let toastT;
+function toast(t){ const el=$("toast"); el.textContent=t; el.classList.remove("hidden"); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.add("hidden"),3200); }
+
+/* ---------- Image quota (per user, resets every 12h) ---------- */
+function setQuota(q){
+  const used=Math.max(0,Number(q.used)||0), limit=Math.max(1,Number(q.limit)||5);
+  window.parent.roomvarSetQuota?.({ used, limit });
+  $("quotaOrb").setAttribute("aria-label", "Создано изображений: "+used+" из "+limit);
+  $("quotaText").textContent=used+"/"+limit;
+  const full=used>=limit;
+  $("quotaOrb").classList.toggle("full", full);
+  let when="";
+  if(q.reset_at){ const d=new Date(q.reset_at); if(!isNaN(d)) when=" Сброс в "+d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})+"."; }
+  $("quotaOrb").title="Изображения: "+used+" из "+limit+"."+when;
+  $("quotaBannerText").textContent="Лимит 5 изображений исчерпан. Он обновляется каждые 12 часов."+when;
+  $("quotaBanner").classList.toggle("hidden", !full);
+}
+async function loadQuota(){ const { data } = await sb.rpc("get_image_quota"); if(data) setQuota(data); }
+document.addEventListener("click", e=>{ if(e.target?.id==="quotaBannerClose") $("quotaBanner").classList.add("hidden"); });
+
+/* ---------- Auth ---------- */
+installPasswordAuth({ doc: document, sb, onUser: async (u) => {
+  if(u?.id === state.user?.id && u !== null) return;
+  state.user = u;
+  if(u){
+    const { data: profile } = await sb.from("profiles").select("display_name, avatar_url, preferences").eq("id",u.id).single();
+    if(profile?.preferences) preferences.restore(profile.preferences);
+    loadQuota();
+    $("auth").classList.add("hidden"); $("app").classList.remove("hidden");
+    $("userEmail").textContent=profile?.display_name || u.email;
+    $("avatar").textContent=(profile?.display_name || u.email || "?")[0].toUpperCase();
+    setTimeout(loadThreads,0);
+  } else {
+    stop(); state.threads=[]; state.activeId=null; state.messages=[]; clearAttachment();
+    $("messages").innerHTML=""; $("threads").innerHTML=""; $("galleryGrid").innerHTML="";
+    $("roomPanel").classList.add("hidden"); document.body.classList.remove("room-open","sb-open");
+    $("app").classList.add("hidden"); $("auth").classList.remove("hidden");
+  }
+}});
+document.addEventListener("roomvar:preferences", () => {
+  if(state.user) sb.from("profiles").update({preferences: {...preferences.settings}}).eq("id", state.user.id).then(({error}) => { if(error) toast("Не удалось сохранить настройки."); });
+});
+
+async function token(){ const { data } = await sb.auth.getSession(); return data.session?.access_token; }
+
+/* ---------- Threads ---------- */
+async function loadThreads(){
+  const { data, error } = await sb.from("conversations").select("*").order("updated_at",{ascending:false});
+  if(error){ toast("Couldn't load chats: "+error.message); return; }
+  state.threads=data; renderThreads();
+  const fromHash = location.hash.slice(1);
+  if(fromHash && data.some(t=>t.id===fromHash)) openThread(fromHash); else showWelcome();
+}
+function groupOf(d){
+  const days=(Date.now()-new Date(d))/864e5;
+  return preferences.t(days<1?"today":days<2?"yesterday":days<7?"week":days<30?"month":"older");
+}
+function renderThreads(){
+  const q=$("search").value.toLowerCase(), box=$("threads"); box.innerHTML="";
+  let last=null;
+  const list=state.threads.filter(t=>t.title.toLowerCase().includes(q));
+  if(!list.length){ box.innerHTML=`<div class="group-label" style="text-transform:none;letter-spacing:0">${preferences.t(q?"noMatch":"noChats")}</div>`; return; }
+  for(const t of list){
+    const g=groupOf(t.updated_at);
+    if(g!==last){ box.insertAdjacentHTML("beforeend",`<div class="group-label">${g}</div>`); last=g; }
+    const row=document.createElement("div"); row.className="thread"+(t.id===state.activeId?" active":"");
+    row.innerHTML=`<button class="t-open">${esc(t.title)}</button>
+      <button class="t-act" data-a="rename" title="${preferences.t('renameChat')}" aria-label="${preferences.t('renameChat')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-6"/><path d="m16 3 5 5M10 14l1-4L19 2a2.1 2.1 0 0 1 3 3l-8 8-4 1Z"/></svg></button>
+      <button class="t-act" data-a="delete" title="${preferences.t('deleteChat')}" aria-label="${preferences.t('deleteChat')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7M14 10v7"/></svg></button>`;
+    row.querySelector(".t-open").onclick=()=>{ openThread(t.id); closeSidebar(); };
+    row.querySelector('[data-a="rename"]').onclick=()=>renameThread(t,row);
+    row.querySelector('[data-a="delete"]').onclick=()=>deleteThread(t);
+    box.appendChild(row);
+  }
+}
+$("search").oninput=renderThreads;
+function renameThread(t,row){
+  const inp=document.createElement("input"); inp.value=t.title; row.innerHTML=""; row.appendChild(inp); inp.focus(); inp.select();
+  const done=async(save)=>{ const v=inp.value.trim(); if(save&&v&&v!==t.title){
+      const { error } = await sb.from("conversations").update({ title:v }).eq("id",t.id);
+      if(error) toast("Rename failed"); else { t.title=v; if(t.id===state.activeId) $("topTitle").textContent=v; } }
+    renderThreads(); };
+  inp.onkeydown=(e)=>{ if(e.key==="Enter") done(true); if(e.key==="Escape") done(false); };
+  inp.onblur=()=>done(true);
+}
+async function deleteThread(t){
+  if(!confirm(`Delete "${t.title}"?`)) return;
+  const { error } = await sb.from("conversations").delete().eq("id",t.id);
+  if(error){ toast("Delete failed"); return; }
+  state.threads=state.threads.filter(x=>x.id!==t.id);
+  if(state.activeId===t.id) showWelcome(); else renderThreads();
+}
+async function openThread(id){
+  if(state.busy) stop();
+  state.activeId=id; state.view="chat"; history.replaceState(null,"","#"+id);
+  const t=state.threads.find(x=>x.id===id); $("topTitle").textContent=t?.title||"roomvar";
+  showSection("chat"); renderThreads();
+  const { data, error } = await sb.from("messages").select("*").eq("conversation_id",id).order("created_at");
+  if(state.activeId!==id) return;
+  if(error){ toast("Couldn't load messages"); return; }
+  state.messages=data; renderMessages(); $("input").focus();
+}
+function showWelcome(){
+  if(state.busy) stop();
+  state.activeId=null; state.messages=[]; state.view="chat"; history.replaceState(null,"",location.pathname+location.search);
+  preferences.greet(); $("topTitle").textContent=preferences.t("chat"); showSection("chat"); renderMessages(); renderThreads(); $("input").focus();
+}
+function showSection(v){
+  state.view=v; syncWelcome();
+  $("gallery").classList.toggle("hidden",v!=="gallery");
+  $("composerWrap").classList.toggle("hidden",v==="gallery");
+  $("messages").classList.toggle("hidden",v!=="chat");
+  $("welcome").classList.toggle("hidden",!(v==="chat"&&!state.activeId&&!state.messages.length));
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
+  if(v==="gallery") $("navGallery").classList.add("active");
+  $("railChat").classList.toggle("selected",v==="chat"); $("railGallery").classList.toggle("selected",v==="gallery");
+}
+
+/* ---------- Rendering messages ---------- */
+function renderMessages(){
+  syncWelcome(); const box=$("messages"); box.innerHTML="";
+  $("welcome").classList.toggle("hidden", !!(state.activeId||state.messages.length));
+  for(const m of state.messages) box.appendChild(msgEl(m));
+  scrollDown();
+}
+function msgEl(m){
+  const el=document.createElement("div");
+  if(m.role==="user"){
+    el.className="msg-user";
+    el.innerHTML=(m.image_url?`<img src="${m.image_url}" alt="Attached room photo">`:"")+esc(m.content);
+  } else {
+    el.className="msg-ai";
+    el.innerHTML=`<img class="logo" src="/favicon.png" alt="Roomvar"><div class="body"></div>`;
+    fillAi(el.querySelector(".body"),m);
+  }
+  return el;
+}
+function fillAi(body,m){
+  if(m.error){ body.innerHTML=`<div class="err-box">${esc(m.error)}</div>`; return; }
+  body.innerHTML = m.content ? `<div class="md">${md(m.content)}</div>` : "";
+  if(m.image_url){
+    const slot=document.createElement("div"); slot.className="imgslot"; body.appendChild(slot);
+    if(m.image_url.startsWith("hf:")){
+      // Unfinished placeholder: never auto-regenerate (it would replace the picture and spend a limit).
+      const p=m.image_url.slice(3);
+      slot.innerHTML=`<div class="err-box" style="margin-top:12px">Изображение не было сохранено. <button class="chip" data-a="retry">Создать снова</button></div>`;
+      slot.querySelector('[data-a="retry"]').onclick=()=>mountImage(slot, m.image_url, p, (src)=>{ m.image_url=src; if(m.id) sb.from("messages").update({image_url:src}).eq("id",m.id).then(()=>{}); });
+    } else mountImage(slot, m.image_url, "");
+  }
+}
+function scrollDown(){ const s=$("scroll"); s.scrollTop=s.scrollHeight; }
+function lightbox(src){ const lb=$("lightbox"); lb.querySelector("img").src=src; lb.classList.remove("hidden"); }
+$("lightbox").onclick=()=>$("lightbox").classList.add("hidden");
+async function download(src){ try { await downloadImage(src); } catch { toast(preferences.t("downloadFailed")); } }
+
+/* ---------- Persistence helpers ---------- */
+async function ensureThread(firstText){
+  if(state.activeId) return state.activeId;
+  const title=(firstText||"Room photo").replace(/\s+/g," ").slice(0,60);
+  const { data, error } = await sb.from("conversations").insert({ title }).select().single();
+  if(error) throw new Error("Couldn't create chat: "+error.message);
+  state.threads.unshift(data); state.activeId=data.id; history.replaceState(null,"","#"+data.id);
+  $("topTitle").textContent=data.title; renderThreads();
+  return data.id;
+}
+async function saveMsg(m){
+  const { data, error } = await sb.from("messages").insert({ conversation_id:m.conversation_id, role:m.role, content:m.content, image_url:m.image_url||null }).select().single();
+  if(error){ toast("Couldn't save message: "+error.message); return m; }
+  return data;
+}
+async function touchThread(id){
+  const now=new Date().toISOString();
+  await sb.from("conversations").update({ updated_at:now }).eq("id",id);
+  const t=state.threads.find(x=>x.id===id); if(t){ t.updated_at=now; state.threads.sort((a,b)=>b.updated_at.localeCompare(a.updated_at)); renderThreads(); }
+}
+
+/* ---------- Send ---------- */
+/* ---------- Pollinations.ai (free, no API key) ---------- */
+const POLLI_TEXT = "https://text.pollinations.ai/";
+const SYSTEM_PROMPT = "Ты эксперт по интерьеру и умный ИИ-ассистент на сайте Roomvar — современной платформе по подбору, дизайну и продаже мебели. Твоя задача — помогать пользователям выбирать мебель, советовать стили (минимализм, лофт, скандинавский и др.), рассчитывать эргономику пространства и генерировать идеи для комнат. Отвечай профессионально, дружелюбно и всегда на том языке, на котором к тебе обратились.";
+const newSeed = (url) => url.startsWith("hf:") ? url : url.replace(/seed=[^&]*/, "seed="+Math.floor(Math.random()*1e9));
+/* Image only when the message is about interiors/design or explicitly asks for a picture. */
+const IMG_RE = /(интерьер|дизайн|комнат|спальн|кухн|гостин|ванн|квартир|мебел|диван|шкаф|стол|стул|кроват|освещен|светильник|люстр|обо[ияе]|покрас|ремонт|перепланиров|стил[ьеяию]|лофт|минимализм|скандинав|неоклассик|модерн|классик|прованс|хай-тек|бохо|эко-стил|декор|планиров|зонирован|плитк|ламинат|паркет|штор|ков[её]р|полк|зеркал|растени|цвет стен|обустро|расстав|подбери|подбер|визуализ|сгенерир|нарису|нарисуй|покажи|создай|сделай (картинк|изображен|фото|рендер)|картинк|изображен|рендер|фото комнат|interior|design|room|bedroom|kitchen|living|bathroom|furniture|sofa|render|draw|generate|image|picture|decor)/i;
+const wantsImage = (text) => IMG_RE.test(text);
+
+/* ---------- Free AI, no API key: server proxies to Pollinations + Hugging Face Spaces ---------- */
+const hfImage = (prompt) => "hf:" + prompt;
+const toDataUrl = (blob) => new Promise(r=>{ const fr=new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(blob); });
+async function hfGenerateImage(prompt){
+  const res = await fetch("/api/image", { method:"POST", headers:{ "Content-Type":"application/json", Authorization: "Bearer " + await token() }, body: JSON.stringify({ prompt }) });
+  if(!res.ok){ const data=await res.json().catch(()=>({})); if(data.quota) setQuota(data.quota); throw new Error(data.error||"Не удалось создать изображение."); }
+  const used=Number(res.headers.get("X-Quota-Used")), limit=Number(res.headers.get("X-Quota-Limit"));
+  if(limit) setQuota({ used, limit, reset_at: res.headers.get("X-Quota-Reset") });
+  return await toDataUrl(await res.blob());
+}
+async function fetchText(history_, signal){
+  const res = await fetch("/api/chat", { method:"POST", signal, headers:{ "Content-Type":"application/json", Authorization: "Bearer " + await token() },
+    body: JSON.stringify({ messages:[{ role:"system", content:SYSTEM_PROMPT+"\n"+replyInstruction(preferences.settings) }, ...history_] }) });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error || `Текстовый сервер не ответил (${res.status}).`);
+  const text = (data.text||"").trim();
+  if(!text) throw new Error("ИИ вернул пустой ответ. Попробуйте ещё раз.");
+  return text;
+}
+
+async function send(){
+  if(state.busy){ stop(); return; }
+  if(state.attachment) return sendRoom();
+  const text=$("input").value.trim();
+  if(!text){ toast("Напишите сообщение."); return; }
+  $("input").value=""; autosize(); clearAttachment(); setBusy(true);
+  const imageOnly = state.imgMode;
+  let tid;
+  try{ tid=await ensureThread(text); }catch(e){ toast(e.message); setBusy(false); return; }
+  showSection("chat");
+  const userMsg=await saveMsg({ conversation_id:tid, role:"user", content:(imageOnly?"🎨 ":"")+text });
+  if(state.activeId!==tid){ setBusy(false); return; }
+  state.messages.push(userMsg); renderMessages();
+
+  const withImage = imageOnly || wantsImage(text);
+  const imgUrl = withImage ? hfImage(text) : null;
+  const el=document.createElement("div"); el.className="msg-ai thinking";
+  el.innerHTML=`<img class="logo" src="/favicon.png" alt="Roomvar"><div class="body"><div class="txt">${imageOnly?"":'<div class="typing"><i></i><i></i><i></i></div>'}</div><div class="imgslot"></div></div>`;
+  $("messages").appendChild(el); scrollDown();
+  const txt=el.querySelector(".txt");
+  // 2. Image starts loading immediately, in parallel with the text request.
+  let savedAi=null, finalImg=null;
+  if(withImage) mountImage(el.querySelector(".imgslot"), imgUrl, text, (src)=>{ finalImg=src; ai.image_url=src; if(savedAi){ savedAi.image_url=src; } if(savedAi?.id) sb.from("messages").update({image_url:src}).eq("id",savedAi.id).then(()=>{}); sb.from("gallery").insert({ prompt:text, image_url:src }).then(({error})=>error&&console.warn("gallery",error)); });
+
+  const ai={ role:"assistant", content:"", image_url:imgUrl, conversation_id:tid };
+  if(!imageOnly){
+    // 1. Text answer.
+    const history_=state.messages.filter(m=>m.content && !m.error).slice(-10).map(m=>({ role:m.role, content:m.content.replace(/^🎨 /,"") }));
+    state.controller=new AbortController();
+    try{
+      ai.content = await fetchText(history_, state.controller.signal);
+      txt.innerHTML=`<div class="md">${md(ai.content)}</div>`;
+    }catch(e){
+      txt.innerHTML = e.name==="AbortError" ? `<div class="note">Остановлено.</div>`
+        : `<div class="err-box">${esc(e.message.includes("Failed to fetch")?"Не удалось связаться с ИИ. Проверьте интернет и попробуйте снова.":e.message)}</div>`;
+    }
+  }
+  el.classList.remove("thinking"); scrollDown();
+  if(finalImg) ai.image_url=finalImg;
+  const saved=await saveMsg(ai); savedAi=saved; if(state.activeId===tid) state.messages.push(saved);
+  touchThread(tid);
+  setBusy(false);
+}
+
+/* ---------- Room designer: photo + request -> furniture placed in YOUR room + Uzum links ---------- */
+function openRoomPanel(html){ $("roomBody").innerHTML=html; $("roomPanel").classList.remove("hidden"); document.body.classList.add("room-open"); }
+$("roomClose").onclick=()=>{ $("roomPanel").classList.add("hidden"); document.body.classList.remove("room-open"); };
+function roomHtml(r, before){
+  const items=(r.items||[]).map(i=>`<a class="rp-item" href="${esc(i.url)}" target="_blank" rel="noopener"><b>${esc(i.name)}</b><span>${esc(i.why)}</span><em>Открыть на Uzum Market →</em></a>`).join("");
+  return `<img class="gen rp-img" src="${r.image}" alt="Ваша комната с новой мебелью">
+    <div class="rp-tabs"><button class="chip" data-v="after">С мебелью</button><button class="chip" data-v="before">Было</button></div>
+    <div class="rp-style">Стиль: <b>${esc(r.style)}</b></div><div class="md">${md(r.advice)}</div>
+    <div class="rp-items">${items}</div>`;
+}
+function wireRoom(r, before){
+  const img=$("roomBody").querySelector(".rp-img");
+  img.onclick=()=>lightbox(img.src);
+  $("roomBody").querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{ img.src = b.dataset.v==="before" ? before : r.image; });
+}
+async function sendRoom(){
+  const photo=state.attachment, text=$("input").value.trim()||"Подбери подходящую мебель для моей комнаты";
+  $("input").value=""; autosize(); clearAttachment(); setBusy(true);
+  let tid; try{ tid=await ensureThread(text); }catch(e){ toast(e.message); setBusy(false); return; }
+  showSection("chat");
+  const userMsg=await saveMsg({ conversation_id:tid, role:"user", content:text, image_url:photo });
+  state.messages.push(userMsg); renderMessages();
+  const el=document.createElement("div"); el.className="msg-ai thinking";
+  el.innerHTML=`<img class="logo" src="/favicon.png" alt="Roomvar"><div class="body"><div class="typing"><i></i><i></i><i></i></div></div>`;
+  $("messages").appendChild(el); scrollDown();
+  openRoomPanel(`<img class="gen rp-img" src="${photo}" alt="Ваша комната"><div class="img-loading" style="margin-top:12px">Смотрю стиль комнаты и подбираю мебель… обычно 30–60 секунд</div>`);
+  const ai={ role:"assistant", content:"", conversation_id:tid };
+  try{
+    const res=await fetch("/api/room",{ method:"POST", headers:{ "Content-Type":"application/json", Authorization: "Bearer " + await token() }, body:JSON.stringify({ image:photo, text }) });
+    const r=await res.json().catch(()=>({}));
+    if(r.quota) setQuota(r.quota);
+    if(!res.ok) throw new Error(r.error||"Не удалось обработать фото.");
+    openRoomPanel(roomHtml(r, photo)); wireRoom(r, photo);
+    ai.content=`**Стиль комнаты:** ${r.style}\n\n${r.advice}\n\n`+(r.items||[]).map(i=>`- [${i.name} — Uzum Market](${i.url})`).join("\n");
+    ai.image_url=r.image;
+    el.querySelector(".body").innerHTML=`<div class="md">${md(ai.content)}</div>`;
+    const im=document.createElement("img"); im.className="gen"; im.style.marginTop="12px"; im.src=r.image; im.onclick=()=>{ openRoomPanel(roomHtml(r, photo)); wireRoom(r, photo); };
+    el.querySelector(".body").appendChild(im);
+    sb.from("gallery").insert({ prompt:text, image_url:r.image }).then(({error})=>error&&console.warn("gallery",error));
+  }catch(e){
+    ai.content=""; ai.error=e.message;
+    el.querySelector(".body").innerHTML=`<div class="err-box">${esc(e.message)}</div>`;
+    $("roomBody").insertAdjacentHTML("beforeend",`<div class="err-box" style="margin-top:12px">${esc(e.message)}</div>`);
+    $("roomBody").querySelector(".img-loading")?.remove();
+  }
+  el.classList.remove("thinking"); scrollDown();
+  if(ai.content){ const saved=await saveMsg(ai); if(state.activeId===tid) state.messages.push(saved); }
+  touchThread(tid); setBusy(false);
+}
+
+/* Image area with its own skeleton loader, error state and retry. */
+function mountImage(slot, url, alt, onDone){
+  slot.classList.add("imgslot");
+  url = resolveImageRequest(url, alt);
+  slot.innerHTML=`<div class="img-loading" >Создаю изображение…</div>`;
+  const img=new Image(); img.className="gen"; img.alt=alt||"Сгенерированный интерьер"; img.style.marginTop="12px";
+  let done=false;
+  const fail=(message="Картинку не удалось создать.")=>{ if(done) return; done=true;
+    slot.innerHTML=`<div class="err-box" style="margin-top:12px">${esc(message)} <button class="chip" data-a="retry">Попробовать ещё</button></div>`;
+    slot.querySelector('[data-a="retry"]').onclick=()=>mountImage(slot,newSeed(url),alt,onDone); };
+  const timer=url?.startsWith("hf:") ? null : setTimeout(fail,90000);
+  img.onload=()=>{ if(done) return; done=true; clearTimeout(timer);
+    slot.innerHTML=""; slot.appendChild(img);
+    img.onclick=()=>lightbox(img.src);
+    installImageActions(slot, img, { t: preferences.t, toast, redo: () => mountImage(slot,alt ? hfImage(alt) : newSeed(url),alt,onDone) });
+    onDone&&onDone(img.src); onDone=null;
+    scrollDown(); };
+  img.onerror=()=>{ clearTimeout(timer); fail(); };
+  if(url && url.startsWith("hf:")){
+    const prompt=url.slice(3);
+    hfGenerateImage(prompt).then(src=>{ img.src=src; }).catch(e=>{ console.warn("image",e); clearTimeout(timer); fail(e.message); });
+  } else img.src=url;
+}
+
+function stop(){ state.controller?.abort(); }
+function setBusy(b){
+  state.busy=b; syncWelcome(); const s=$("send");
+  s.innerHTML = b ? `<svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
+  s.title = preferences.t(b ? "stop" : "send"); updateSend(); if(!b) $("input").focus();
+}
+function updateSend(){ $("send").disabled = !state.busy && !$("input").value.trim() && !state.attachment; }
+
+/* ---------- Composer ---------- */
+const input=$("input");
+function autosize(){ input.style.height="auto"; input.style.height=Math.min(input.scrollHeight,200)+"px"; updateSend(); }
+input.oninput=autosize;
+input.onkeydown=(e)=>{ if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); if(!state.busy) send(); } };
+input.onfocus=()=>$("composer").classList.add("focus");
+input.onblur=()=>$("composer").classList.remove("focus");
+$("send").onclick=send;
+function setImgMode(on){
+  state.imgMode=on; $("imgMode").classList.toggle("on",on); $("box").classList.toggle("img-mode",on);
+  input.placeholder = preferences.t(on ? "imageInput" : "input");
+  if(on) clearAttachment();
+}
+$("imgMode").onclick=()=>{ setImgMode(!state.imgMode); input.focus(); };
+$("attach").onclick=()=>{ setImgMode(false); $("file").click(); };
+$("file").onchange=async(e)=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  await attachImage(f);
+};
+input.addEventListener("paste", (event) => {
+  const file=pastedImage(event.clipboardData);
+  if(!file) return;
+  event.preventDefault();
+  void attachImage(file);
+});
+async function attachImage(f){
+  if(!f.type.startsWith("image/")){ toast(preferences.t("invalidImage")); return; }
+  try{ state.attachment=await resizeImage(f,1024); }catch{ toast(preferences.t("readImageFailed")); return; }
+  setImgMode(false);
+  $("preview").innerHTML=`<div class="pv"><img src="${state.attachment}" alt="Room photo"><button title="Remove">×</button></div>`;
+  $("preview").classList.remove("hidden"); $("preview").querySelector("button").onclick=clearAttachment;
+  updateSend(); input.focus();
+}
+function clearAttachment(){ state.attachment=null; $("preview").innerHTML=""; $("preview").classList.add("hidden"); updateSend(); }
+function resizeImage(file,max){
+  return new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>{ const s=Math.min(1,max/Math.max(img.width,img.height));
+    const c=document.createElement("canvas"); c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(img.src); res(c.toDataURL("image/jpeg",.85)); };
+    img.onerror=rej; img.src=URL.createObjectURL(file); });
+}
+
+/* Voice input (browser speech recognition, where supported) */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition; let rec=null;
+$("mic").onclick=()=>{
+  if(!SR){ toast("Voice input isn't supported in this browser."); return; }
+  if(rec){ rec.stop(); return; }
+  rec=new SR(); rec.interimResults=true; rec.lang=({ru:"ru-RU",uz:"uz-UZ",en:"en-US"})[preferences.settings.language];
+  const base=input.value; $("mic").classList.add("mic-on");
+  rec.onresult=(e)=>{ input.value=(base?base+" ":"")+Array.from(e.results).map(r=>r[0].transcript).join(""); autosize(); };
+  rec.onend=()=>{ rec=null; $("mic").classList.remove("mic-on"); input.focus(); };
+  rec.onerror=(e)=>{ if(e.error!=="aborted") toast("Voice input error: "+e.error); };
+  rec.start();
+};
+
+/* ---------- Suggestions & navigation ---------- */
+$("newChat").onclick=()=>{ setImgMode(false); showWelcome(); closeSidebar(); };
+$("navImage").onclick=()=>{ showWelcome(); setImgMode(true); closeSidebar(); input.focus(); };
+$("navRoom").onclick=()=>{ showWelcome(); setImgMode(false); closeSidebar(); input.value="Поставь мне стул в комнату"; autosize(); $("file").click(); };
+$("navGallery").onclick=async()=>{ if(state.busy) stop(); state.activeId=null; renderThreads(); showSection("gallery"); $("topTitle").textContent="My gallery"; closeSidebar(); loadGallery(); };
+async function loadGallery(){
+  const g=$("galleryGrid"); g.innerHTML=`<div class="empty">Loading…</div>`;
+  const { data, error } = await sb.from("gallery").select("*").order("created_at",{ascending:false});
+  if(error){ g.innerHTML=`<div class="empty">Couldn't load your gallery.</div>`; return; }
+  if(!data.length){ g.innerHTML=`<div class="empty">${preferences.t("emptyGallery")}</div>`; return; }
+  g.innerHTML="";
+  for(const it of data){ const d=document.createElement("div"); d.className="g-item";
+    d.innerHTML=`<img src="${it.image_url}" alt="${esc(it.prompt)}" loading="lazy"><div class="meta"><span>${esc(it.prompt)}</span>
+      <button class="icon-btn" data-a="dl" title="Download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/></svg></button>
+      <button class="icon-btn" data-a="del" title="${preferences.t('deleteImage')}" aria-label="${preferences.t('deleteImage')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7M14 10v7"/></svg></button></div>`;
+    d.querySelector("img").onclick=()=>lightbox(it.image_url);
+    d.querySelector('[data-a="dl"]').onclick=()=>download(it.image_url);
+    d.querySelector('[data-a="del"]').onclick=async()=>{ if(!confirm(preferences.t("confirmDeleteImage"))) return;
+      const { error } = await sb.from("gallery").delete().eq("id",it.id); if(error) toast("Delete failed"); else { d.remove(); if(!g.children.length) g.innerHTML=`<div class="empty">${preferences.t("emptyGallery")}</div>`; } };
+    g.appendChild(d); }
+}
+function closeSidebar(){ document.body.classList.remove("sb-open", "tools-open"); }
+$("scrim").onclick=closeSidebar;
+
+$("railChat").onclick=()=>$("newChat").click();
+$("railRoom").onclick=()=>$("navRoom").click();
+$("railImage").onclick=()=>$("navImage").click();
+$("railGallery").onclick=()=>$("navGallery").click();
+
+const account=()=>{ $("accountEmail").textContent=state.user?.email||""; $("accountDialog").showModal(); };
+$("railAccount").onclick=account;
+$("closeAccount").onclick=()=>$("accountDialog").close();
+$("accountLogout").onclick=()=>{ $("accountDialog").close(); $("logout").click(); };
+syncWelcome();
+/* Boot: show sign-in if there is no session */
+
+})();
+</script>
+<script type="module" src="/roomvar-panels.js"></script>
+</body>
+</html>

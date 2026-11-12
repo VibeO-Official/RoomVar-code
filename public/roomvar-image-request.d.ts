@@ -1,0 +1,1 @@
+export function resolveImageRequest(url: string, prompt?: string): string;

@@ -1,0 +1,22 @@
+:root{
+  --quota-glass:oklch(.16 .03 155);
+  --quota-shadow:inset 0 1px 3px oklch(.92 .007 140 / .2),0 0 10px oklch(.66 .17 151 / .2);
+  --quota-text-shadow:0 1px 3px oklch(0 0 0),0 0 4px oklch(0 0 0);
+  --welcome-background:radial-gradient(ellipse 48% 43% at 50% 51%,oklch(.31 .09 153 / .78) 0%,oklch(.23 .065 153 / .62) 34%,oklch(.15 .035 153 / .35) 65%,transparent 100%),var(--bg);
+  --welcome-composer:oklch(.17 .012 153);
+  --bg:oklch(0 0 0);--panel:oklch(.115 .018 164);--panel-2:oklch(.16 .023 161);--line:oklch(.22 .033 153);--line-2:oklch(.29 .045 151);
+  --text:oklch(.92 .007 140);--muted:oklch(.67 .015 150);--dim:oklch(.45 .019 150);
+  --accent:oklch(.66 .17 151);--accent-2:oklch(.78 .15 157);--lime:oklch(.89 .23 124);--danger:oklch(.76 .14 27);--primary-ink:oklch(.16 .04 162);
+  --olive-line:oklch(.34 .055 117);--teal-line:oklch(.3 .055 200);--sans:'Manrope',system-ui,sans-serif;
+  --workspace-background:var(--bg);
+  --chat-background:var(--bg);
+  --history-background:radial-gradient(ellipse at 0% 0%,oklch(.5 .05 173 / .85),transparent 35%),var(--panel);
+  --composer-background:linear-gradient(115deg,oklch(.17 .018 153 / .8),oklch(.08 .008 140 / .8));
+  --user-background:oklch(.22 0 0);
+  --action-background:linear-gradient(115deg,var(--lime),oklch(.76 .17 168));
+  --avatar-background:linear-gradient(135deg,oklch(.69 .10 170),oklch(.79 .12 120));
+  --emblem-background:radial-gradient(circle,oklch(.18 .06 149),var(--bg));--emblem-shadow:0 0 24px oklch(.5 .16 149 / .15);--status-shadow:0 0 8px oklch(.66 .17 151 / .4);
+  --auth-background:var(--bg);
+  --auth-card-background:linear-gradient(145deg,oklch(.19 .027 155 / .88),oklch(.09 .012 155 / .96));--auth-shadow:0 20px 100px oklch(.02 0 0 / .4),inset 0 1px 0 oklch(.8 .02 150 / .05);
+  --overlay:oklch(.03 .008 150 / .85);--error-background:oklch(.25 .05 25 / .4);
+}
